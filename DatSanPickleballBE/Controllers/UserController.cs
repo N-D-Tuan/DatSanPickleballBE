@@ -7,7 +7,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace DatSanPickleballBE.Controllers
 {
-    [Route("api/[controller]")]
+    [Route("[controller]")]
     [ApiController]
     public class UserController : ControllerBase
     {
@@ -17,7 +17,8 @@ namespace DatSanPickleballBE.Controllers
             this.qly = qly;
         }
 
-        [HttpGet("all")]
+        [HttpGet]
+        [Route("/All")]
         public async Task<ActionResult<IEnumerable<UserDto>>> GetAll()
         {
             var users = await qly.Users
@@ -34,7 +35,8 @@ namespace DatSanPickleballBE.Controllers
             return Ok(users);
         }
 
-        [HttpGet("search-by-name/{tenNguoiDung}")]
+        [HttpGet]
+        [Route("/User/{tenNguoiDung}")]
         public IActionResult GetUserByTenNguoiDung(string tenNguoiDung)
         {
             if (string.IsNullOrEmpty(tenNguoiDung))
@@ -58,6 +60,33 @@ namespace DatSanPickleballBE.Controllers
 
             return Ok(users);
         }
+        [HttpGet]
+        [Route("/User/TenNguoiDung/{email}")]
+        public IActionResult GetUserByEmail(string email)
+        {
+            if (string.IsNullOrEmpty(email))
+                return BadRequest("Vui lòng nhập email cần tìm.");
+
+            var users = qly.Users
+                .Where(u => EF.Functions.Like(u.Email.ToLower(), $"%{email.ToLower()}%"))
+                .Select(u => new UserDto
+                {
+                    maNguoiDung = u.MaNguoiDung,
+                    tenNguoiDung = u.TenNguoiDung,
+                    email = u.Email,
+                    soDienThoai = u.SoDienThoai,
+                    matKhau = u.MatKhau,
+                    role = u.Role
+                })
+                .ToList().FirstOrDefault();
+
+            if (users == null)
+                return NotFound("Không tìm thấy người dùng phù hợp với email.");
+
+            return Ok(users);
+        }
+
+
         [HttpPost("create")]
         public async Task<IActionResult> CreateUser([FromBody] CreateUserDto userDto)
         {

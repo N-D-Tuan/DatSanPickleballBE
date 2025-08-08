@@ -6,7 +6,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace DatSanPickleballBE.Controllers
 {
-    [Route("api/[controller]")]
+    [Route("[controller]")]
     [ApiController]
     public class SanController : ControllerBase
     {
@@ -18,6 +18,7 @@ namespace DatSanPickleballBE.Controllers
         }
 
         [HttpGet]
+        [Route("/San/List")]
         public IActionResult GetAllSan()
         {
             var result = qly.Sans
@@ -35,7 +36,8 @@ namespace DatSanPickleballBE.Controllers
         }
 
         // GET: api/San/tenSan
-        [HttpGet("search-by-name/{tenSan}")]
+        [HttpGet]
+        [Route("/TenSan/{tenSan}")]
         public IActionResult GetSanByTen(string tenSan)
         {
             var result = qly.Sans

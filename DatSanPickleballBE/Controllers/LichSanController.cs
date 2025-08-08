@@ -6,7 +6,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace DatSanPickleballBE.Controllers
 {
-    [Route("api/[controller]")]
+    [Route("[controller]")]
     [ApiController]
     public class LichSanController : ControllerBase
     {
@@ -18,6 +18,7 @@ namespace DatSanPickleballBE.Controllers
         }
 
         [HttpGet]
+        [Route("/LichSan/ListLichSan")]
         public async Task<ActionResult<IEnumerable<LichSanDto>>> GetAllLichSan()
         {
             var list = await qly.LichSans
@@ -34,7 +35,29 @@ namespace DatSanPickleballBE.Controllers
             return Ok(list);
         }
 
-        [HttpGet("search-by-id/{maLichSan}")]
+        [HttpGet]
+        [Route("/LichSan/ListNgay")]
+        public IActionResult GetNgay()
+        {
+            var today = DateOnly.FromDateTime(DateTime.Today);
+
+            var ngayList = qly.LichSans
+                .Where(ls => ls.Ngay >= today)
+                .Select(ls => ls.Ngay) // Lấy phần ngày, bỏ giờ
+                .Distinct()
+                .OrderBy(d => d)
+                .ToList();
+
+            if (ngayList == null || !ngayList.Any())
+            {
+                return NotFound(new { message = "Không có ngày nào phù hợp." });
+            }
+
+            return Ok(ngayList);
+        }
+
+        [HttpGet]
+        [Route("/MaLichSan/{maLichSan}")]
         public async Task<ActionResult<LichSanDto>> GetLichSanById(int maLichSan)
         {
             var ls = await qly.LichSans.FirstOrDefaultAsync(l => l.MaLichSan == maLichSan);

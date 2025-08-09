@@ -78,5 +78,42 @@ namespace DatSanPickleballBE.Controllers
 
             return Ok(lichSanDto);
         }
+        [HttpGet]
+        [Route("/LichSan/GetTimeSlots/{ngay}/{maSan}")]
+        public IActionResult GetLichTheoNgayVaSan(DateTime ngay, int maSan)
+        {
+            var ngayDateOnly = DateOnly.FromDateTime(ngay);
+
+            // Lấy tất cả khung giờ
+            var allSlots = qly.KhungGios
+                .Select(k => new TimeSlotDto
+                {
+                    MaKhungGio = k.MaKhungGio,
+                    KhungGio = $"{k.GioBatDau:HH\\:mm} - {k.GioKetThuc:HH\\:mm}", // Format 24h
+                    TrangThai = "Trống"
+                })
+                .ToList();
+
+            // Lấy danh sách đã đặt cho ngày & sân được chọn
+            var bookedSlots = qly.LichSans
+                .Where(ls => ls.Ngay == ngayDateOnly && ls.MaSan == maSan)
+                .Select(ls => new { ls.MaKhungGio, ls.IsBooked })
+                .ToList();
+
+            // Merge trạng thái
+            foreach (var slot in allSlots)
+            {
+                var found = bookedSlots.FirstOrDefault(b => b.MaKhungGio == slot.MaKhungGio);
+                if (found != null && found.IsBooked == true)
+                {
+                    slot.TrangThai = "Đã đặt";
+                }
+            }
+
+            // Sắp xếp theo MaKhungGio tăng dần
+            var sortedSlots = allSlots.OrderBy(s => s.MaKhungGio).ToList();
+
+            return Ok(sortedSlots);
+        }
     }
 }

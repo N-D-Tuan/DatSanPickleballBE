@@ -29,6 +29,13 @@ public partial class San
     [StringLength(100)]
     public string? ViTri { get; set; }
 
+    [Column("hinhAnh")]
+    [Unicode(false)]
+    public string? HinhAnh { get; set; }
+
+    [Column("gia")]
+    public int? Gia { get; set; }
+
     [InverseProperty("MaSanNavigation")]
     public virtual ICollection<LichSan> LichSans { get; set; } = new List<LichSan>();
 }

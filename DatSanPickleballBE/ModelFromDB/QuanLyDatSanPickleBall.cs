@@ -27,13 +27,15 @@ public partial class QuanLyDatSanPickleBall : DbContext
 
     protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
 #warning To protect potentially sensitive information in your connection string, you should move it out of source code. You can avoid scaffolding the connection string by using the Name= syntax to read it from configuration - see https://go.microsoft.com/fwlink/?linkid=2131148. For more guidance on storing connection strings, see https://go.microsoft.com/fwlink/?LinkId=723263.
-        => optionsBuilder.UseSqlServer("Data Source=TUAN\\MSSQLSERVER01;Initial Catalog=QuanLyDatSanPickleBall;Persist Security Info=True;User ID=sa;Password=123;Encrypt=false;");
+        => optionsBuilder.UseSqlServer("Data Source=PHAT;Initial Catalog=QuanLyDatSanPickleBall;Persist Security Info=True;User ID=sa;Password=123;Encrypt=false;");
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         modelBuilder.Entity<Booking>(entity =>
         {
-            entity.HasKey(e => e.MaBooking).HasName("PK__Booking__ED3802C25949C054");
+            entity.HasKey(e => e.MaBooking).HasName("PK__Booking__ED3802C2E49A85A0");
+
+            entity.ToTable("Booking", tb => tb.HasTrigger("trg_UpdateIsBooked"));
 
             entity.HasOne(d => d.MaLichSanNavigation).WithMany(p => p.Bookings).HasConstraintName("FK__Booking__maLichS__44FF419A");
 
@@ -42,14 +44,14 @@ public partial class QuanLyDatSanPickleBall : DbContext
 
         modelBuilder.Entity<KhungGio>(entity =>
         {
-            entity.HasKey(e => e.MaKhungGio).HasName("PK__KhungGio__D0AD3B33D9DA1198");
+            entity.HasKey(e => e.MaKhungGio).HasName("PK__KhungGio__D0AD3B33D6C68606");
 
             entity.Property(e => e.MaKhungGio).ValueGeneratedNever();
         });
 
         modelBuilder.Entity<LichSan>(entity =>
         {
-            entity.HasKey(e => e.MaLichSan).HasName("PK__LichSan__FFB5B701E368607C");
+            entity.HasKey(e => e.MaLichSan).HasName("PK__LichSan__FFB5B70126154B67");
 
             entity.Property(e => e.IsBooked).HasDefaultValue(false);
 
@@ -60,14 +62,14 @@ public partial class QuanLyDatSanPickleBall : DbContext
 
         modelBuilder.Entity<San>(entity =>
         {
-            entity.HasKey(e => e.MaSan).HasName("PK__San__0C895661CEFB3BC4");
+            entity.HasKey(e => e.MaSan).HasName("PK__San__0C895661FE97EB9D");
 
             entity.Property(e => e.MaSan).ValueGeneratedNever();
         });
 
         modelBuilder.Entity<User>(entity =>
         {
-            entity.HasKey(e => e.MaNguoiDung).HasName("PK__User__446439EA5A7294C1");
+            entity.HasKey(e => e.MaNguoiDung).HasName("PK__User__446439EA4B632387");
         });
 
         OnModelCreatingPartial(modelBuilder);

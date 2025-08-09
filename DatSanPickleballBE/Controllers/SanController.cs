@@ -28,7 +28,9 @@ namespace DatSanPickleballBE.Controllers
                     TenSan = s.TenSan,
                     KieuSan = s.KieuSan,
                     TrangThai = s.TrangThai,
-                    ViTri = s.ViTri
+                    ViTri = s.ViTri,
+                    HinhAnh = s.HinhAnh,
+                    Gia = s.Gia
                 })
                 .ToList();
 

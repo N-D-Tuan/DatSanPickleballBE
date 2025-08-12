@@ -181,6 +181,34 @@ namespace DatSanPickleballBE.Controllers
                 return StatusCode(500, $"Lỗi: {ex.Message}");
             }
         }
+        [HttpPut("UpdatePasswordByEmail/{email}")]
+        public IActionResult UpdatePasswordByEmail(string email, [FromBody] string newPassword)
+        {
+            try
+            {
+                if (string.IsNullOrWhiteSpace(email) || string.IsNullOrWhiteSpace(newPassword))
+                {
+                    return BadRequest("Email và mật khẩu mới không được để trống.");
+                }
+
+                var user = qly.Users.FirstOrDefault(u => u.Email.ToLower() == email.ToLower());
+
+                if (user == null)
+                {
+                    return NotFound("Không tìm thấy người dùng với email đã cho.");
+                }
+
+                // Cập nhật mật khẩu
+                user.MatKhau = newPassword;
+                qly.SaveChanges();
+
+                return Ok("Cập nhật mật khẩu thành công.");
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, $"Lỗi: {ex.Message}");
+            }
+        }
 
     }
 }

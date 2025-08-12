@@ -86,8 +86,13 @@ namespace DatSanPickleballBE.Controllers
 
             // Lấy tất cả khung giờ
             var allSlots = qly.KhungGios
-                .Select(k => new TimeSlotDto
+                .Join(
+                qly.LichSans.Where(ls => ls.Ngay == ngayDateOnly && ls.MaSan == maSan),
+                k => k.MaKhungGio,
+                ls => ls.MaKhungGio,
+                (k, ls) => new TimeSlotDto
                 {
+                    MaLichSan = ls.MaLichSan,
                     MaKhungGio = k.MaKhungGio,
                     KhungGio = $"{k.GioBatDau:HH\\:mm} - {k.GioKetThuc:HH\\:mm}", // Format 24h
                     TrangThai = "Trống"
@@ -115,5 +120,37 @@ namespace DatSanPickleballBE.Controllers
 
             return Ok(sortedSlots);
         }
+
+        [HttpGet("get-ma-lich-san")]
+        public IActionResult GetMaLichSan(int maSan, DateTime ngay, int maKhungGio)
+        {
+            try
+            {
+                // Chuyển DateTime sang DateOnly nếu bảng LichSan dùng DateOnly
+                var ngayDateOnly = DateOnly.FromDateTime(ngay);
+
+                var lichSan = qly.LichSans
+                    .FirstOrDefault(ls =>
+                        ls.MaSan == maSan &&
+                        ls.Ngay == ngayDateOnly &&
+                        ls.MaKhungGio == maKhungGio
+                    );
+
+                if (lichSan == null)
+                {
+                    return NotFound("Không tìm thấy lịch sân.");
+                }
+
+                return Ok(new
+                {
+                    MaLichSan = lichSan.MaLichSan
+                });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, $"Lỗi: {ex.Message}");
+            }
+        }
+
     }
 }

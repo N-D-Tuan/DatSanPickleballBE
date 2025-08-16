@@ -33,6 +33,9 @@ public partial class User
     [StringLength(50)]
     public string? Role { get; set; }
 
+    public string? ResetOtp { get; set; }
+    public DateTime? ResetOtpExpiry { get; set; }
+
     [InverseProperty("MaNguoiDungNavigation")]
     public virtual ICollection<Booking> Bookings { get; set; } = new List<Booking>();
 }

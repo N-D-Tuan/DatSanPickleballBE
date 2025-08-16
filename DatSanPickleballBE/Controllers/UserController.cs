@@ -1,9 +1,11 @@
 ﻿using DatSanPickleballBE.ModelDto;
 using DatSanPickleballBE.ModelFromDB;
 using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Identity.Data;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Data.SqlClient;
 using Microsoft.EntityFrameworkCore;
+using Org.BouncyCastle.Crypto.Generators;
 
 namespace DatSanPickleballBE.Controllers
 {
@@ -12,9 +14,11 @@ namespace DatSanPickleballBE.Controllers
     public class UserController : ControllerBase
     {
         QuanLyDatSanPickleBall qly;
-        public UserController(QuanLyDatSanPickleBall qly)
+        private readonly EmailService _emailService;
+        public UserController(QuanLyDatSanPickleBall qly, EmailService emailService)
         {
             this.qly = qly;
+            _emailService = emailService;
         }
 
         [HttpGet]
@@ -210,5 +214,57 @@ namespace DatSanPickleballBE.Controllers
             }
         }
 
+        [HttpPost("reset-password")]
+        public async Task<IActionResult> RequestPasswordReset([FromBody] string email)
+        {
+            if (string.IsNullOrEmpty(email))
+                return BadRequest("Email không được để trống");
+
+            var user = await qly.Users.FirstOrDefaultAsync(u => u.Email == email);
+            if (user == null)
+                return NotFound("Không tìm thấy người dùng với email này");
+
+            // Tạo mã OTP ngẫu nhiên 6 số
+            var random = new Random();
+            var otp = random.Next(100000, 999999).ToString();
+
+            // Lưu OTP và thời hạn hết hạn
+            user.ResetOtp = otp;
+            user.ResetOtpExpiry = DateTime.Now.AddMinutes(10); // OTP hết hạn sau 10 phút
+            await qly.SaveChangesAsync();
+
+            // Gửi email chứa OTP
+            await _emailService.SendEmailAsync(email, "Mã OTP đặt lại mật khẩu",
+                $"Mã OTP của bạn là: {otp} (có hiệu lực trong 10 phút)");
+
+            return Ok("Mã OTP đã được gửi đến email của bạn");
+        }
+
+
+        [HttpPut("reset-password")]
+        public async Task<IActionResult> ResetPassword([FromBody] ResetPasswordDto request)
+        {
+            if (string.IsNullOrEmpty(request.Otp) || string.IsNullOrEmpty(request.matKhau))
+                return BadRequest("Thiếu OTP hoặc mật khẩu mới");
+
+            // Kiểm tra OTP
+            var user = await qly.Users
+                .FirstOrDefaultAsync(u => u.ResetOtp == request.Otp && u.ResetOtpExpiry > DateTime.Now);
+
+            if (user == null)
+                return BadRequest("OTP không hợp lệ hoặc đã hết hạn");            
+
+            // Lấy mật khẩu mới
+            user.MatKhau = request.matKhau;
+
+            // Xóa OTP sau khi dùng
+            user.ResetOtp = null;
+            user.ResetOtpExpiry = null;
+
+            // Lưu thay đổi vào DB
+            await qly.SaveChangesAsync();
+
+            return Ok("Đổi mật khẩu thành công");
+        }
     }
 }

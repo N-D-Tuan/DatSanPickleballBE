@@ -1,3 +1,4 @@
+using DatSanPickleballBE.Controllers;
 using DatSanPickleballBE.ModelFromDB;
 using Microsoft.EntityFrameworkCore;
 
@@ -17,6 +18,9 @@ builder.Services.AddCors(options =>
 // Add services to the container.
 
 builder.Services.AddControllers();
+//TestEmail
+builder.Services.AddScoped<EmailService>();
+
 // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();

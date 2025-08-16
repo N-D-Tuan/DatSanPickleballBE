@@ -17,17 +17,29 @@ public partial class QuanLyDatSanPickleBall : DbContext
 
     public virtual DbSet<Booking> Bookings { get; set; }
 
+    public virtual DbSet<ChiTietDonHang> ChiTietDonHangs { get; set; }
+
+    public virtual DbSet<DanhMucSanPham> DanhMucSanPhams { get; set; }
+
+    public virtual DbSet<DonHang> DonHangs { get; set; }
+
+    public virtual DbSet<GiamGium> GiamGia { get; set; }
+
+    public virtual DbSet<GioHang> GioHangs { get; set; }
+
     public virtual DbSet<KhungGio> KhungGios { get; set; }
 
     public virtual DbSet<LichSan> LichSans { get; set; }
 
     public virtual DbSet<San> Sans { get; set; }
 
+    public virtual DbSet<SanPham> SanPhams { get; set; }
+
     public virtual DbSet<User> Users { get; set; }
 
     protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
 #warning To protect potentially sensitive information in your connection string, you should move it out of source code. You can avoid scaffolding the connection string by using the Name= syntax to read it from configuration - see https://go.microsoft.com/fwlink/?linkid=2131148. For more guidance on storing connection strings, see https://go.microsoft.com/fwlink/?LinkId=723263.
-        => optionsBuilder.UseSqlServer("Data Source=TUAN\\MSSQLSERVER01;Initial Catalog=QuanLyDatSanPickleBall;Persist Security Info=True;User ID=sa;Password=123;Encrypt=false;");
+        => optionsBuilder.UseSqlServer("Data Source=PHAT;Initial Catalog=QuanLyDatSanPickleBall;Persist Security Info=True;User ID=sa;Password=123;Encrypt=false;");
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -40,6 +52,49 @@ public partial class QuanLyDatSanPickleBall : DbContext
             entity.HasOne(d => d.MaLichSanNavigation).WithMany(p => p.Bookings).HasConstraintName("FK__Booking__maLichS__44FF419A");
 
             entity.HasOne(d => d.MaNguoiDungNavigation).WithMany(p => p.Bookings).HasConstraintName("FK__Booking__maNguoi__440B1D61");
+        });
+
+        modelBuilder.Entity<ChiTietDonHang>(entity =>
+        {
+            entity.HasKey(e => new { e.MaDonHang, e.MaSanPham }).HasName("PK__ChiTietD__A2A901DD7264A359");
+
+            entity.HasOne(d => d.MaDonHangNavigation).WithMany(p => p.ChiTietDonHangs).HasConstraintName("FK__ChiTietDo__maDon__00200768");
+
+            entity.HasOne(d => d.MaSanPhamNavigation).WithMany(p => p.ChiTietDonHangs).HasConstraintName("FK__ChiTietDo__maSan__01142BA1");
+        });
+
+        modelBuilder.Entity<DanhMucSanPham>(entity =>
+        {
+            entity.HasKey(e => e.MaDanhMuc).HasName("PK__DanhMucS__6B0F914C263D9256");
+        });
+
+        modelBuilder.Entity<DonHang>(entity =>
+        {
+            entity.HasKey(e => e.MaDonHang).HasName("PK__DonHang__871D381933E7876F");
+
+            entity.Property(e => e.NgayDat).HasDefaultValueSql("(getdate())");
+
+            entity.HasOne(d => d.MaNguoiDungNavigation).WithMany(p => p.DonHangs)
+                .OnDelete(DeleteBehavior.Cascade)
+                .HasConstraintName("FK__DonHang__maNguoi__7B5B524B");
+        });
+
+        modelBuilder.Entity<GiamGium>(entity =>
+        {
+            entity.HasKey(e => e.MaGiamGia).HasName("PK__GiamGia__F26B142D96DD9B3B");
+
+            entity.Property(e => e.SoLanDaSuDung).HasDefaultValue(0);
+        });
+
+        modelBuilder.Entity<GioHang>(entity =>
+        {
+            entity.HasKey(e => new { e.MaNguoiDung, e.MaSanPham }).HasName("PK__GioHang__61D0002EA992243D");
+
+            entity.Property(e => e.SoLuong).HasDefaultValue(1);
+
+            entity.HasOne(d => d.MaNguoiDungNavigation).WithMany(p => p.GioHangs).HasConstraintName("FK__GioHang__maNguoi__74AE54BC");
+
+            entity.HasOne(d => d.MaSanPhamNavigation).WithMany(p => p.GioHangs).HasConstraintName("FK__GioHang__maSanPh__75A278F5");
         });
 
         modelBuilder.Entity<KhungGio>(entity =>
@@ -65,6 +120,34 @@ public partial class QuanLyDatSanPickleBall : DbContext
             entity.HasKey(e => e.MaSan).HasName("PK__San__0C895661FE97EB9D");
 
             entity.Property(e => e.MaSan).ValueGeneratedNever();
+        });
+
+        modelBuilder.Entity<SanPham>(entity =>
+        {
+            entity.HasKey(e => e.MaSanPham).HasName("PK__SanPham__5B439C430946D107");
+
+            entity.Property(e => e.SoLuongTon).HasDefaultValue(0);
+
+            entity.HasOne(d => d.MaDanhMucNavigation).WithMany(p => p.SanPhams)
+                .OnDelete(DeleteBehavior.SetNull)
+                .HasConstraintName("FK__SanPham__maDanhM__6383C8BA");
+
+            entity.HasMany(d => d.MaGiamGia).WithMany(p => p.MaSanPhams)
+                .UsingEntity<Dictionary<string, object>>(
+                    "SanPhamGiamGium",
+                    r => r.HasOne<GiamGium>().WithMany()
+                        .HasForeignKey("MaGiamGia")
+                        .HasConstraintName("FK__SanPhamGi__maGia__6FE99F9F"),
+                    l => l.HasOne<SanPham>().WithMany()
+                        .HasForeignKey("MaSanPham")
+                        .HasConstraintName("FK__SanPhamGi__maSan__6EF57B66"),
+                    j =>
+                    {
+                        j.HasKey("MaSanPham", "MaGiamGia").HasName("PK__SanPhamG__94652D0122FCB248");
+                        j.ToTable("SanPhamGiamGia");
+                        j.IndexerProperty<int>("MaSanPham").HasColumnName("maSanPham");
+                        j.IndexerProperty<int>("MaGiamGia").HasColumnName("maGiamGia");
+                    });
         });
 
         modelBuilder.Entity<User>(entity =>

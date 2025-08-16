@@ -38,4 +38,10 @@ public partial class User
 
     [InverseProperty("MaNguoiDungNavigation")]
     public virtual ICollection<Booking> Bookings { get; set; } = new List<Booking>();
+
+    [InverseProperty("MaNguoiDungNavigation")]
+    public virtual ICollection<DonHang> DonHangs { get; set; } = new List<DonHang>();
+
+    [InverseProperty("MaNguoiDungNavigation")]
+    public virtual ICollection<GioHang> GioHangs { get; set; } = new List<GioHang>();
 }

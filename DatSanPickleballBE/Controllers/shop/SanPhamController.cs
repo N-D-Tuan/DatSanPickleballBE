@@ -2,6 +2,7 @@
 using DatSanPickleballBE.ModelFromDB;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 
 namespace DatSanPickleballBE.Controllers.shop
 {
@@ -75,6 +76,69 @@ namespace DatSanPickleballBE.Controllers.shop
             qly.SanPhams.Add(entity);
             qly.SaveChanges();
             return Ok(entity);
+        }
+        // GET: api/DoYeuThich/{maNguoiDung}
+        [HttpGet("DoYeuThich/{maNguoiDung}")]
+        public async Task<IActionResult> GetDoYeuThichByNguoiDung(int maNguoiDung)
+        {
+            var items = await qly.DoYeuThiches
+                .Where(d => d.MaNguoiDung == maNguoiDung)
+                .Include(d => d.SanPham)
+                .Select(d => new DoYeuThichDto
+                {
+                    MaNguoiDung = d.MaNguoiDung,
+                    MaSanPham = d.MaSanPham,
+                    TenSanPham = d.SanPham.TenSanPham,
+                    GiaBan = d.SanPham.GiaBan,
+                    HinhAnh = d.SanPham.HinhAnh,
+                    MoTa = d.SanPham.MoTa,
+                    SoLuongTon = d.SanPham.SoLuongTon,
+                    MaDanhMuc = d.SanPham.MaDanhMuc ?? 0,
+                    TenDanhMuc = d.SanPham.MaDanhMucNavigation.TenDanhMuc
+                })
+                .ToListAsync();
+
+            if (!items.Any())
+                return NotFound("Người dùng chưa có sản phẩm yêu thích nào.");
+
+            return Ok(items);
+        }
+
+        // POST: api/DoYeuThich
+        [HttpPost("create/DoYeuThich/")]
+        public async Task<IActionResult> AddDoYeuThich([FromBody] CreateDoYeuThichDto model)
+        {
+            if (model == null)
+                return BadRequest("Dữ liệu không hợp lệ.");
+
+            // Kiểm tra đã tồn tại chưa
+            var exists = await qly.DoYeuThiches
+                .AnyAsync(d => d.MaNguoiDung == model.MaNguoiDung && d.MaSanPham == model.MaSanPham);
+
+            if (exists)
+                return Conflict("Sản phẩm này đã có trong danh sách yêu thích.");
+
+            // Dùng raw SQL để INSERT
+            var sql = "INSERT INTO DoYeuThich (MaNguoiDung, MaSanPham) VALUES (@p0, @p1)";
+            await qly.Database.ExecuteSqlRawAsync(sql, model.MaNguoiDung, model.MaSanPham);
+
+            return Ok("Đã thêm vào danh sách yêu thích.");
+        }
+
+        // DELETE: api/DoYeuThich/{maNguoiDung}/{maSanPham}
+        [HttpDelete("Delete/{maNguoiDung}/{maSanPham}")]
+        public async Task<IActionResult> DeleteDoYeuThich(int maNguoiDung, int maSanPham)
+        {
+            var item = await qly.DoYeuThiches
+                .FirstOrDefaultAsync(d => d.MaNguoiDung == maNguoiDung && d.MaSanPham == maSanPham);
+
+            if (item == null)
+                return NotFound("Không tìm thấy sản phẩm trong danh sách yêu thích.");
+
+            qly.DoYeuThiches.Remove(item);
+            await qly.SaveChangesAsync();
+
+            return Ok("Đã xóa sản phẩm khỏi danh sách yêu thích.");
         }
     }
 }

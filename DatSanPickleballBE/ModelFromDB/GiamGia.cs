@@ -6,8 +6,8 @@ using Microsoft.EntityFrameworkCore;
 
 namespace DatSanPickleballBE.ModelFromDB;
 
-[Index("MaCode", Name = "UQ__GiamGia__366294EBCA013844", IsUnique = true)]
-public partial class GiamGium
+[Index("MaCode", Name = "UQ__GiamGia__366294EBF0DB27F0", IsUnique = true)]
+public partial class GiamGia
 {
     [Key]
     [Column("maGiamGia")]

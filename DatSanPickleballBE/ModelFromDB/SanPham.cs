@@ -49,5 +49,7 @@ public partial class SanPham
 
     [ForeignKey("MaSanPham")]
     [InverseProperty("MaSanPhams")]
-    public virtual ICollection<GiamGium> MaGiamGia { get; set; } = new List<GiamGium>();
+    public virtual ICollection<GiamGia> MaGiamGia { get; set; } = new List<GiamGia>();
+    public virtual ICollection<DoYeuThich> DoYeuThiches { get; set; } = new List<DoYeuThich>();
+
 }

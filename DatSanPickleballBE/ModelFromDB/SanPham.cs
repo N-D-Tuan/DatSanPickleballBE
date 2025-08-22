@@ -41,11 +41,20 @@ public partial class SanPham
     public virtual ICollection<ChiTietDonHang> ChiTietDonHangs { get; set; } = new List<ChiTietDonHang>();
 
     [InverseProperty("MaSanPhamNavigation")]
+    public virtual ICollection<DanhGiaSanPham> DanhGiaSanPhams { get; set; } = new List<DanhGiaSanPham>();
+
+    [InverseProperty("MaSanPhamNavigation")]
     public virtual ICollection<GioHang> GioHangs { get; set; } = new List<GioHang>();
+
+    [InverseProperty("MaSanPhamNavigation")]
+    public virtual ICollection<HinhAnhSanPham> HinhAnhSanPhams { get; set; } = new List<HinhAnhSanPham>();
 
     [ForeignKey("MaDanhMuc")]
     [InverseProperty("SanPhams")]
     public virtual DanhMucSanPham? MaDanhMucNavigation { get; set; }
+
+    [InverseProperty("MaSanPhamNavigation")]
+    public virtual ICollection<TinhNangSanPham> TinhNangSanPhams { get; set; } = new List<TinhNangSanPham>();
 
     [ForeignKey("MaSanPham")]
     [InverseProperty("MaSanPhams")]

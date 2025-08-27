@@ -22,20 +22,45 @@ namespace DatSanPickleballBE.Controllers.shop
         [Route("/SanPham/ListAll")]
         public IActionResult GetAll()
         {
-            var result = from sp in qly.SanPhams
-                         join dm in qly.DanhMucSanPhams on sp.MaDanhMuc equals dm.MaDanhMuc 
-                         select new SanPhamDto
+            var result = qly.SanPhams
+                        .Include(sp => sp.MaDanhMucNavigation)
+                        .Include(sp => sp.MaGiamGia)
+                        .AsEnumerable()
+                        .Select(sp => 
                         {
-                            MaSanPham = sp.MaSanPham,
-                            TenSanPham = sp.TenSanPham,
-                            SoLuongTon = sp.SoLuongTon,
-                            GiaNhap = sp.GiaNhap,
-                            GiaBan = sp.GiaBan,  
-                            HinhAnh = sp.HinhAnh,
-                            MoTa = sp.MoTa,
-                            MaDanhMuc = sp.MaDanhMuc,
-                            TenDanhMuc = dm.TenDanhMuc
-                        }; 
+                            var giamGiaSoTien = sp.MaGiamGia
+                                .Where(gg => gg.LoaiGiamGia == "sotien" && gg.TrangThai == "HoatDong")
+                                .Select(gg => gg.GiaTri)
+                                .DefaultIfEmpty(0)
+                                .Max();
+
+                            var giamGiaPhanTram = sp.MaGiamGia
+                                .Where(gg => gg.LoaiGiamGia == "phantram" && gg.TrangThai == "HoatDong")
+                                .Select(gg => gg.GiaTri)
+                                .DefaultIfEmpty(0)
+                                .Max();
+
+                            var giaBanSauTien = sp.GiaBan
+                                                - giamGiaSoTien
+                                                - (sp.GiaBan * giamGiaPhanTram / 100);
+
+                            if (giaBanSauTien < 0) giaBanSauTien = 0;
+
+                            return new SanPhamAllDto
+                            {
+                                MaSanPham = sp.MaSanPham,
+                                TenSanPham = sp.TenSanPham,
+                                SoLuongTon = sp.SoLuongTon,
+                                GiaNhap = sp.GiaNhap,
+                                GiaBan = sp.GiaBan,
+                                HinhAnh = sp.HinhAnh,
+                                MoTa = sp.MoTa,
+                                MaDanhMuc = sp.MaDanhMuc,
+                                TenDanhMuc = sp.MaDanhMucNavigation.TenDanhMuc,
+                                OriginalPrice = giaBanSauTien
+                            };
+                            
+                        }); 
             return Ok(result);
         }
 
@@ -44,21 +69,45 @@ namespace DatSanPickleballBE.Controllers.shop
         [Route("/SanPham/ListAllForDetail")]
         public IActionResult GetAllForDetail()
         {
-            var result = (from sp in qly.SanPhams
-                         join dm in qly.DanhMucSanPhams on sp.MaDanhMuc equals dm.MaDanhMuc
-                         select new SanPhamDetailDto
-                         {
-                             Id = sp.MaSanPham,
-                             Name = sp.TenSanPham,
-                             Category = dm.TenDanhMuc,
-                             Price = sp.GiaBan,
-                             OriginalPrice = sp.GiaBan, // nếu muốn hiện giá gốc
-                             Image = sp.HinhAnh,
-                             Description = sp.MoTa,
-                             StockQuantity = sp.SoLuongTon,
-                             Badge = "sale",
-                         }).ToList();
-            
+            var result = qly.SanPhams
+                .Include(sp => sp.MaDanhMucNavigation)
+                .Include(sp => sp.MaGiamGia)
+                .AsEnumerable()
+                .Select(sp => 
+                {
+                    var giamGiaSoTien = sp.MaGiamGia
+                                .Where(gg => gg.LoaiGiamGia == "sotien" && gg.TrangThai == "HoatDong")
+                                .Select(gg => gg.GiaTri)
+                                .DefaultIfEmpty(0)
+                                .Max();
+
+                    var giamGiaPhanTram = sp.MaGiamGia
+                                .Where(gg => gg.LoaiGiamGia == "phantram" && gg.TrangThai == "HoatDong")
+                                .Select(gg => gg.GiaTri)
+                                .DefaultIfEmpty(0)
+                                .Max();
+
+                    var giaBanSauTien = sp.GiaBan
+                                        - giamGiaSoTien
+                                        - (sp.GiaBan * giamGiaPhanTram / 100);
+
+                    if (giaBanSauTien < 0) giaBanSauTien = 0;
+
+                    return new SanPhamDetailDto
+                    {
+                        Id = sp.MaSanPham,
+                        Name = sp.TenSanPham,
+                        Category = sp.MaDanhMucNavigation.TenDanhMuc,
+                        Price = giaBanSauTien,
+                        OriginalPrice = sp.GiaBan, // nếu muốn hiện giá gốc
+                        Image = sp.HinhAnh,
+                        Description = sp.MoTa,
+                        StockQuantity = sp.SoLuongTon,
+                        Badge = "sale",
+                    };  
+                }).ToList();
+
+
             if (result == null)
                 return NotFound();
 

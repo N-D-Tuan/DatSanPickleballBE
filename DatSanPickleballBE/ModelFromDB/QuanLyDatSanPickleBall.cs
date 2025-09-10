@@ -36,9 +36,13 @@ public partial class QuanLyDatSanPickleBall : DbContext
 
     public virtual DbSet<LichSan> LichSans { get; set; }
 
+    public virtual DbSet<QuanHuyen> QuanHuyens { get; set; }
+
     public virtual DbSet<San> Sans { get; set; }
 
     public virtual DbSet<SanPham> SanPhams { get; set; }
+
+    public virtual DbSet<ThanhPho> ThanhPhos { get; set; }
 
     public virtual DbSet<TinhNangSanPham> TinhNangSanPhams { get; set; }
 
@@ -72,15 +76,15 @@ public partial class QuanLyDatSanPickleBall : DbContext
 
         modelBuilder.Entity<DanhGiaSanPham>(entity =>
         {
-            entity.HasKey(e => e.MaDanhGia).HasName("PK__DanhGiaS__6B15DD9A25EC03D7");
+            entity.HasKey(e => e.MaDanhGia).HasName("PK__DanhGiaS__6B15DD9A2A4FF10D");
 
             entity.HasOne(d => d.MaNguoiDungNavigation).WithMany(p => p.DanhGiaSanPhams)
                 .OnDelete(DeleteBehavior.Cascade)
-                .HasConstraintName("FK__DanhGiaSa__maNgu__04E4BC85");
+                .HasConstraintName("FK__DanhGiaSa__maNgu__0A9D95DB");
 
             entity.HasOne(d => d.MaSanPhamNavigation).WithMany(p => p.DanhGiaSanPhams)
                 .OnDelete(DeleteBehavior.Cascade)
-                .HasConstraintName("FK__DanhGiaSa__maSan__05D8E0BE");
+                .HasConstraintName("FK__DanhGiaSa__maSan__0B91BA14");
         });
 
         modelBuilder.Entity<DanhMucSanPham>(entity =>
@@ -97,6 +101,10 @@ public partial class QuanLyDatSanPickleBall : DbContext
             entity.HasOne(d => d.MaNguoiDungNavigation).WithMany(p => p.DonHangs)
                 .OnDelete(DeleteBehavior.Cascade)
                 .HasConstraintName("FK__DonHang__maNguoi__7D439ABD");
+
+            entity.HasOne(d => d.MaTpNavigation).WithMany(p => p.DonHangs)
+                .OnDelete(DeleteBehavior.SetNull)
+                .HasConstraintName("FK_DonHang_ThanhPho");
         });
 
         modelBuilder.Entity<GiamGia>(entity =>
@@ -119,11 +127,11 @@ public partial class QuanLyDatSanPickleBall : DbContext
 
         modelBuilder.Entity<HinhAnhSanPham>(entity =>
         {
-            entity.HasKey(e => e.MaHinhAnh).HasName("PK__HinhAnhS__134CD06C64E39562");
+            entity.HasKey(e => e.MaHinhAnh).HasName("PK__HinhAnhS__134CD06C594AF4E7");
 
             entity.HasOne(d => d.MaSanPhamNavigation).WithMany(p => p.HinhAnhSanPhams)
                 .OnDelete(DeleteBehavior.Cascade)
-                .HasConstraintName("FK__HinhAnhSa__maSan__08B54D69");
+                .HasConstraintName("FK__HinhAnhSa__maSan__0E6E26BF");
         });
 
         modelBuilder.Entity<KhungGio>(entity =>
@@ -142,6 +150,15 @@ public partial class QuanLyDatSanPickleBall : DbContext
             entity.HasOne(d => d.MaKhungGioNavigation).WithMany(p => p.LichSans).HasConstraintName("FK__LichSan__maKhung__403A8C7D");
 
             entity.HasOne(d => d.MaSanNavigation).WithMany(p => p.LichSans).HasConstraintName("FK__LichSan__maSan__3F466844");
+        });
+
+        modelBuilder.Entity<QuanHuyen>(entity =>
+        {
+            entity.HasKey(e => e.MaQh).HasName("PK__QuanHuye__7A3EFC236838CA56");
+
+            entity.HasOne(d => d.MaTpNavigation).WithMany(p => p.QuanHuyens)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK__QuanHuyen__maTP__17F790F9");
         });
 
         modelBuilder.Entity<San>(entity =>
@@ -179,13 +196,18 @@ public partial class QuanLyDatSanPickleBall : DbContext
                     });
         });
 
+        modelBuilder.Entity<ThanhPho>(entity =>
+        {
+            entity.HasKey(e => e.MaTp).HasName("PK__ThanhPho__7A22625BD90D5EDE");
+        });
+
         modelBuilder.Entity<TinhNangSanPham>(entity =>
         {
-            entity.HasKey(e => e.MaTinhNang).HasName("PK__TinhNang__A12681BFC2683EA1");
+            entity.HasKey(e => e.MaTinhNang).HasName("PK__TinhNang__A12681BFEC69C809");
 
             entity.HasOne(d => d.MaSanPhamNavigation).WithMany(p => p.TinhNangSanPhams)
                 .OnDelete(DeleteBehavior.Cascade)
-                .HasConstraintName("FK__TinhNangS__maSan__0B91BA14");
+                .HasConstraintName("FK__TinhNangS__maSan__114A936A");
         });
 
         modelBuilder.Entity<User>(entity =>
@@ -195,6 +217,7 @@ public partial class QuanLyDatSanPickleBall : DbContext
             entity.HasIndex(e => e.ResetOtp, "UQ_User_ResetOtp_NotNull")
                 .IsUnique()
                 .HasFilter("([ResetOtp] IS NOT NULL)");
+
         });
 
         modelBuilder.Entity<DoYeuThich>(entity =>

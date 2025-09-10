@@ -19,12 +19,22 @@ namespace DatSanPickleballBE.Controllers
         }
 
         [HttpGet("create-payment")]
-        public IActionResult CreatePayment()
+        public IActionResult CreatePayment(string type = "booking")
         {
             var vnp_TmnCode = _config["VnPay:TmnCode"];
             var vnp_HashSecret = _config["VnPay:HashSecret"];
             var vnp_Url = _config["VnPay:PaymentUrl"];
-            var vnp_ReturnUrl = _config["VnPay:ReturnUrl"];
+            var baseReturnUrl = _config["VnPay:ReturnUrl"];
+
+            //// phân biệt returnUrl theo type
+            //string vnp_ReturnUrl = type switch
+            //{
+            //    "checkout" => $"{baseReturnUrl}/checkout?payment=success",
+            //    _ => $"{baseReturnUrl}/booking?payment=success"
+            //};
+
+            string vnp_ReturnUrl = $"{baseReturnUrl}/api/VNPay/payment-return?type={type}";
+
 
             var vnpParams = new SortedDictionary<string, string>
     {
@@ -36,7 +46,7 @@ namespace DatSanPickleballBE.Controllers
         { "vnp_CurrCode", "VND" },
         { "vnp_IpAddr", HttpContext.Connection.RemoteIpAddress?.ToString() ?? "127.0.0.1" },
         { "vnp_Locale", "vn" },
-        { "vnp_OrderInfo", "Thanh toan dat san" },
+        { "vnp_OrderInfo", "Thanh toan" },
         { "vnp_OrderType", "other" },
         { "vnp_ReturnUrl", vnp_ReturnUrl },
         { "vnp_TxnRef", DateTime.Now.Ticks.ToString() }
@@ -58,39 +68,36 @@ namespace DatSanPickleballBE.Controllers
             return Ok(new { paymentUrl });
         }
 
-        [HttpGet("return")]
-        public IActionResult PaymentReturn()
+        [HttpGet("payment-return")]
+        public IActionResult PaymentReturn(string type, [FromQuery] string vnp_ResponseCode, [FromQuery] string vnp_TxnRef)
         {
-            var vnp_HashSecret = _config["VnPay:HashSecret"];
-
-            // Bỏ vnp_SecureHash và vnp_SecureHashType
-            var vnpData = Request.Query
-                .Where(kvp => kvp.Key != "vnp_SecureHash" && kvp.Key != "vnp_SecureHashType")
-                .ToDictionary(kvp => kvp.Key, kvp => kvp.Value.ToString());
-
-            // Sắp xếp theo key tăng dần
-            var sortedData = new SortedDictionary<string, string>(vnpData);
-
-            // Ghép chuỗi key=value và encode UTF-8
-            var signData = string.Join("&", sortedData.Select(kvp =>
-                $"{WebUtility.UrlEncode(kvp.Key)}={WebUtility.UrlEncode(kvp.Value)}"));
-
-            // Tạo hash
-            using var hmac = new HMACSHA512(Encoding.UTF8.GetBytes(vnp_HashSecret));
-            var hashBytes = hmac.ComputeHash(Encoding.UTF8.GetBytes(signData));
-            var calculatedHash = BitConverter.ToString(hashBytes).Replace("-", "").ToUpper();
-
-            var vnp_SecureHash = Request.Query["vnp_SecureHash"].ToString();
-            var responseCode = Request.Query["vnp_ResponseCode"].ToString();
-
-            if (calculatedHash == vnp_SecureHash)
+            if (vnp_ResponseCode == "00")
             {
-                return Content("ok"); // => success modal
+                if (type == "booking")
+                {
+                    // Redirect về trang index của frontend
+                    return Redirect("https://localhost:7279/?payment=success&type=booking");
+                }
+                else if (type == "checkout")
+                {
+                    // Redirect về trang shop của frontend
+                    return Redirect("https://localhost:7279/Shop/CheckoutIndex?payment=success&type=checkout");
+                }
             }
             else
             {
-                return Content("invalid signature");
+                if (type == "booking")
+                {
+                    // Redirect về trang index của frontend
+                    return Redirect("https://localhost:7279");
+                }
+                else if (type == "checkout")
+                {
+                    // Redirect về trang shop của frontend
+                    return Redirect("https://localhost:7279/Shop/CheckoutIndex");
+                }
             }
+            return BadRequest(new { Message = $"Thanh toán {type} thất bại", vnp_TxnRef });
         }
 
     }

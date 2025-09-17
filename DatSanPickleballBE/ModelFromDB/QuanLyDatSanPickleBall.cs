@@ -72,6 +72,8 @@ public partial class QuanLyDatSanPickleBall : DbContext
             entity.HasOne(d => d.MaDonHangNavigation).WithMany(p => p.ChiTietDonHangs).HasConstraintName("FK__ChiTietDo__maDon__02084FDA");
 
             entity.HasOne(d => d.MaSanPhamNavigation).WithMany(p => p.ChiTietDonHangs).HasConstraintName("FK__ChiTietDo__maSan__02FC7413");
+
+            entity.ToTable(tb => tb.HasTrigger("trg_UpdateSoLuongTon_ChiTietDonHang"));
         });
 
         modelBuilder.Entity<DanhGiaSanPham>(entity =>
@@ -105,6 +107,8 @@ public partial class QuanLyDatSanPickleBall : DbContext
             entity.HasOne(d => d.MaTpNavigation).WithMany(p => p.DonHangs)
                 .OnDelete(DeleteBehavior.SetNull)
                 .HasConstraintName("FK_DonHang_ThanhPho");
+
+            entity.ToTable(tb => tb.HasTrigger("trg_UpdateSoLuongTon_DonHang"));
         });
 
         modelBuilder.Entity<GiamGia>(entity =>

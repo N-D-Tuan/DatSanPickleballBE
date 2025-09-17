@@ -10,6 +10,7 @@ namespace DatSanPickleballBE.Controllers
     {
         private readonly string _smtpServer = "smtp.gmail.com"; // SMTP server Gmail
         private readonly int _smtpPort = 587; // TLS
+        private readonly string _displayName = "Pickleball Tuấn Phát";
         private readonly string _fromEmail = "0899244124tuan@gmail.com"; // email gửi
         private readonly string _fromPassword = "tlex kadd netn kwbf"; // App Password
 
@@ -22,7 +23,7 @@ namespace DatSanPickleballBE.Controllers
 
                 var mailMessage = new MailMessage
                 {
-                    From = new MailAddress(_fromEmail),
+                    From = new MailAddress(_fromEmail, _displayName),
                     Subject = subject,
                     Body = body,
                     IsBodyHtml = true // cho phép HTML

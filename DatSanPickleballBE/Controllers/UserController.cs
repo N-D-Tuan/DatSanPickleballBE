@@ -1,5 +1,6 @@
 ﻿using DatSanPickleballBE.ModelDto;
 using DatSanPickleballBE.ModelFromDB;
+using DatSanPickleballBE.Helpers;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Identity.Data;
 using Microsoft.AspNetCore.Mvc;
@@ -54,7 +55,6 @@ namespace DatSanPickleballBE.Controllers
                     tenNguoiDung = u.TenNguoiDung,
                     email = u.Email,
                     soDienThoai = u.SoDienThoai,
-                    matKhau = u.MatKhau,
                     role = u.Role
                 })
                 .ToList();
@@ -64,32 +64,60 @@ namespace DatSanPickleballBE.Controllers
 
             return Ok(users);
         }
-        [HttpGet]
-        [Route("/User/TenNguoiDung/{email}")]
-        public IActionResult GetUserByEmail(string email)
+        //[HttpGet]
+        //[Route("/User/TenNguoiDung/{email}")]
+        //public IActionResult GetUserByEmail(string email)
+        //{
+        //    if (string.IsNullOrEmpty(email))
+        //        return BadRequest("Vui lòng nhập email cần tìm.");
+
+        //    var users = qly.Users
+        //        .Where(u => EF.Functions.Like(u.Email.ToLower(), $"%{email.ToLower()}%"))
+        //        .Select(u => new UserDto
+        //        {
+        //            maNguoiDung = u.MaNguoiDung,
+        //            tenNguoiDung = u.TenNguoiDung,
+        //            email = u.Email,
+        //            soDienThoai = u.SoDienThoai,
+        //            matKhau = u.MatKhau,
+        //            role = u.Role
+        //        })
+        //        .ToList().FirstOrDefault();
+
+        //    if (users == null)
+        //        return NotFound("Không tìm thấy người dùng phù hợp với email.");
+
+        //    return Ok(users);
+        //}
+
+        [HttpPost]
+        [Route("/User/Login")]
+        public IActionResult Login([FromBody] LoginDto model)
         {
-            if (string.IsNullOrEmpty(email))
-                return BadRequest("Vui lòng nhập email cần tìm.");
+            if (string.IsNullOrEmpty(model.Email) || string.IsNullOrEmpty(model.Password))
+                return BadRequest("Vui lòng nhập email và mật khẩu.");
 
-            var users = qly.Users
-                .Where(u => EF.Functions.Like(u.Email.ToLower(), $"%{email.ToLower()}%"))
-                .Select(u => new UserDto
-                {
-                    maNguoiDung = u.MaNguoiDung,
-                    tenNguoiDung = u.TenNguoiDung,
-                    email = u.Email,
-                    soDienThoai = u.SoDienThoai,
-                    matKhau = u.MatKhau,
-                    role = u.Role
-                })
-                .ToList().FirstOrDefault();
+            var user = qly.Users.FirstOrDefault(u => u.Email.ToLower() == model.Email.ToLower());
+            if (user == null)
+                return NotFound("Email không tồn tại.");
 
-            if (users == null)
-                return NotFound("Không tìm thấy người dùng phù hợp với email.");
+            // Kiểm tra password với hash
+            bool isValid = PasswordHasher.Verify(model.Password, user.MatKhau);
+            if (!isValid)
+                return Unauthorized("Sai mật khẩu.");
 
-            return Ok(users);
+            // Trả về user DTO (không trả mật khẩu gốc)
+            var dto = new UserDto
+            {
+                maNguoiDung = user.MaNguoiDung,
+                tenNguoiDung = user.TenNguoiDung,
+                email = user.Email,
+                soDienThoai = user.SoDienThoai,
+                role = user.Role
+            };
+
+            return Ok(dto);
         }
-
 
         [HttpPost("create")]
         public async Task<IActionResult> CreateUser([FromBody] CreateUserDto userDto)
@@ -108,6 +136,9 @@ namespace DatSanPickleballBE.Controllers
                 // Gán mặc định nếu role không có hoặc để trống
                 var role = string.IsNullOrWhiteSpace(userDto.role) ? "NguoiDung" : userDto.role;
 
+                // Hash mật khẩu trước khi lưu
+                string hashedPassword = PasswordHasher.HashPassword(userDto.matKhau);
+
                 // Tạo câu truy vấn SQL
                 string sql = @"
             INSERT INTO [User] (tenNguoiDung, email, soDienThoai, matKhau, role)
@@ -119,7 +150,7 @@ namespace DatSanPickleballBE.Controllers
                     new SqlParameter("@tenNguoiDung", userDto.tenNguoiDung),
                     new SqlParameter("@email", userDto.email),
                     new SqlParameter("@soDienThoai", userDto.soDienThoai),
-                    new SqlParameter("@matKhau", userDto.matKhau),
+                    new SqlParameter("@matKhau", hashedPassword),
                     new SqlParameter("@role", role)
                 );
 
@@ -135,7 +166,7 @@ namespace DatSanPickleballBE.Controllers
             }
         }
         [HttpPut("{maNguoiDung}")]
-        public IActionResult UpdateUserByMaNguoiDung(int maNguoiDung, [FromBody] CreateUserDto updatedUser)
+        public IActionResult UpdateUserByMaNguoiDung(int maNguoiDung, [FromBody] UpdateUserDto updatedUser)
         {
             try
             {
@@ -150,7 +181,6 @@ namespace DatSanPickleballBE.Controllers
                 user.TenNguoiDung = updatedUser.tenNguoiDung ?? user.TenNguoiDung;
                 user.Email = updatedUser.email ?? user.Email;
                 user.SoDienThoai = updatedUser.soDienThoai ?? user.SoDienThoai;
-                user.MatKhau = updatedUser.matKhau ?? user.MatKhau;
                 user.Role = string.IsNullOrWhiteSpace(updatedUser.role) ? "NguoiDung" : updatedUser.role;
 
                 qly.SaveChanges();
@@ -185,34 +215,35 @@ namespace DatSanPickleballBE.Controllers
                 return StatusCode(500, $"Lỗi: {ex.Message}");
             }
         }
-        [HttpPut("UpdatePasswordByEmail/{email}")]
-        public IActionResult UpdatePasswordByEmail(string email, [FromBody] string newPassword)
-        {
-            try
-            {
-                if (string.IsNullOrWhiteSpace(email) || string.IsNullOrWhiteSpace(newPassword))
-                {
-                    return BadRequest("Email và mật khẩu mới không được để trống.");
-                }
 
-                var user = qly.Users.FirstOrDefault(u => u.Email.ToLower() == email.ToLower());
+        //[HttpPut("UpdatePasswordByEmail/{email}")]
+        //public IActionResult UpdatePasswordByEmail(string email, [FromBody] string newPassword)
+        //{
+        //    try
+        //    {
+        //        if (string.IsNullOrWhiteSpace(email) || string.IsNullOrWhiteSpace(newPassword))
+        //        {
+        //            return BadRequest("Email và mật khẩu mới không được để trống.");
+        //        }
 
-                if (user == null)
-                {
-                    return NotFound("Không tìm thấy người dùng với email đã cho.");
-                }
+        //        var user = qly.Users.FirstOrDefault(u => u.Email.ToLower() == email.ToLower());
 
-                // Cập nhật mật khẩu
-                user.MatKhau = newPassword;
-                qly.SaveChanges();
+        //        if (user == null)
+        //        {
+        //            return NotFound("Không tìm thấy người dùng với email đã cho.");
+        //        }
 
-                return Ok("Cập nhật mật khẩu thành công.");
-            }
-            catch (Exception ex)
-            {
-                return StatusCode(500, $"Lỗi: {ex.Message}");
-            }
-        }
+        //        // Cập nhật mật khẩu
+        //        user.MatKhau = newPassword;
+        //        qly.SaveChanges();
+
+        //        return Ok("Cập nhật mật khẩu thành công.");
+        //    }
+        //    catch (Exception ex)
+        //    {
+        //        return StatusCode(500, $"Lỗi: {ex.Message}");
+        //    }
+        //}
 
         [HttpPost("reset-password")]
         public async Task<IActionResult> RequestPasswordReset([FromBody] string email)
@@ -252,10 +283,10 @@ namespace DatSanPickleballBE.Controllers
                 .FirstOrDefaultAsync(u => u.ResetOtp == request.Otp && u.ResetOtpExpiry > DateTime.Now);
 
             if (user == null)
-                return BadRequest("OTP không hợp lệ hoặc đã hết hạn");            
+                return BadRequest("OTP không hợp lệ hoặc đã hết hạn");
 
-            // Lấy mật khẩu mới
-            user.MatKhau = request.matKhau;
+            // Hash mật khẩu mới
+            user.MatKhau = PasswordHasher.HashPassword(request.matKhau);
 
             // Xóa OTP sau khi dùng
             user.ResetOtp = null;

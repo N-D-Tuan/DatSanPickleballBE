@@ -296,6 +296,22 @@ namespace DatSanPickleballBE.Controllers
             await qly.SaveChangesAsync();
 
             return Ok("Đổi mật khẩu thành công");
-        }     
+        }
+
+        [HttpPost("verify-password")]
+        public IActionResult VerifyPassword([FromBody] LoginDto model)
+        {
+            var user = qly.Users.FirstOrDefault(u => u.Email == model.Email);
+            if (user == null)
+                return NotFound("Email không tồn tại.");
+
+            // Verify password với hash + salt (PasswordHasher bạn đã có sẵn)
+            bool isValid = PasswordHasher.Verify(model.Password, user.MatKhau);
+            if (!isValid)
+                return Unauthorized("Mật khẩu hiện tại không đúng.");
+
+            return Ok("Mật khẩu hợp lệ.");
+        }
+
     }
 }

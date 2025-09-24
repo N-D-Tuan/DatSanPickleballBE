@@ -134,6 +134,46 @@ namespace DatSanPickleballBE.Controllers.shop
         }
 
         [HttpGet]
+        [Route("/SanPham/Detail/{maSanPham}")]
+        public IActionResult GetDetail(int maSanPham)
+        {
+            var sp = qly.SanPhams
+                .Include(s => s.MaDanhMucNavigation)
+                .Include(s => s.MaGiamGia)
+                .FirstOrDefault(s => s.MaSanPham == maSanPham);
+
+            if (sp == null)
+                return NotFound();
+
+            var result = new SanPhamAdminDto
+            {
+                MaSanPham = sp.MaSanPham,
+                TenSanPham = sp.TenSanPham,
+                MaDanhMuc = sp.MaDanhMuc,
+                GiaNhap = sp.GiaNhap,
+                GiaBan = sp.GiaBan,
+                HinhAnh = sp.HinhAnh,
+                MoTa = sp.MoTa,
+                SoLuongTon = sp.SoLuongTon,
+            };
+
+            // Load thêm ảnh
+            result.Images = qly.HinhAnhSanPhams
+                .Where(h => h.MaSanPham == sp.MaSanPham)
+                .Select(h => h.HinhAnh)
+                .ToList();
+
+            // Load thêm tính năng
+            result.Features = qly.TinhNangSanPhams
+                .Where(t => t.MaSanPham == sp.MaSanPham)
+                .Select(t => t.MoTaTinhNang)
+                .ToList();
+
+            return Ok(result);
+        }
+
+
+        [HttpGet]
         [Route("/SanPham/List/{maDanhMuc}")]
         public IActionResult GetSanPhamTheoMaDanhMuc(int maDanhMuc)
         {
@@ -169,28 +209,154 @@ namespace DatSanPickleballBE.Controllers.shop
         }
         [HttpPost]
         [Route("/SanPham/Insert")]
-        public IActionResult Insert([FromBody] SanPhamDto newSanPham)
+        public IActionResult Insert([FromBody] SanPhamAdminDto newSanPham)
         {
-            if(newSanPham == null)
+            if (newSanPham == null)
             {
-                return BadRequest("Dữ liệu sản phẩm không hợp lệ");
+                return BadRequest("Dữ liệu không hợp lệ");
             }
-            var entity = new SanPham
+
+            // Khởi tạo sản phẩm mới
+            var sp = new SanPham
             {
-                MaSanPham = newSanPham.MaSanPham,
                 TenSanPham = newSanPham.TenSanPham,
-                SoLuongTon = newSanPham.SoLuongTon,
-                GiaNhap = newSanPham.GiaNhap,
-                GiaBan = newSanPham.GiaBan,
-                HinhAnh = newSanPham.HinhAnh,
+                MaDanhMuc = newSanPham.MaDanhMuc,
+                GiaNhap = newSanPham.GiaNhap ?? 0,
+                GiaBan = newSanPham.GiaBan ?? 0,
                 MoTa = newSanPham.MoTa,
-                MaDanhMuc = newSanPham.MaDanhMuc
+                HinhAnh = newSanPham.HinhAnh,
+                SoLuongTon = newSanPham.SoLuongTon ?? 0
             };
 
-            qly.SanPhams.Add(entity);
-            qly.SaveChanges();
-            return Ok(entity);
+            qly.SanPhams.Add(sp);
+            try
+            {
+                qly.SaveChanges(); // lưu trước để có MaSanPham (identity từ DB)
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, "Lỗi khi thêm sản phẩm: " + ex.Message);
+            }
+
+            // =============================
+            // Xử lý Images
+            // =============================
+            if (newSanPham.Images != null && newSanPham.Images.Any())
+            {
+                foreach (var img in newSanPham.Images)
+                {
+                    qly.HinhAnhSanPhams.Add(new HinhAnhSanPham
+                    {
+                        MaSanPham = sp.MaSanPham,
+                        HinhAnh = img
+                    });
+                }
+            }
+
+            // =============================
+            // Xử lý Features
+            // =============================
+            if (newSanPham.Features != null && newSanPham.Features.Any())
+            {
+                foreach (var ft in newSanPham.Features)
+                {
+                    qly.TinhNangSanPhams.Add(new TinhNangSanPham
+                    {
+                        MaSanPham = sp.MaSanPham,
+                        MoTaTinhNang = ft
+                    });
+                }
+            }
+
+            try
+            {
+                qly.SaveChanges();
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, "Lỗi khi thêm ảnh/tính năng: " + ex.Message);
+            }
+
+            return Ok(new { message = "Thêm sản phẩm thành công", sp.MaSanPham });
         }
+        [HttpPut]
+        [Route("/SanPham/Update/{maSanPham}")]
+        public IActionResult Update(int maSanPham, [FromBody] SanPhamAdminDto dto)
+        {
+            if (dto == null || maSanPham != dto.MaSanPham)
+            {
+                return BadRequest("Dữ liệu không hợp lệ");
+            }
+
+            var sp = qly.SanPhams.FirstOrDefault(s => s.MaSanPham == maSanPham);
+            if (sp == null)
+            {
+                return NotFound("Không tìm thấy sản phẩm");
+            }
+
+            // Cập nhật thông tin cơ bản
+            sp.TenSanPham = dto.TenSanPham;
+            sp.MaDanhMuc = dto.MaDanhMuc;
+            sp.GiaNhap = dto.GiaNhap ?? sp.GiaNhap;  // giá nhập
+            sp.GiaBan = dto.GiaBan ?? sp.GiaBan;  // giá gốc
+            sp.MoTa = dto.MoTa;
+            sp.HinhAnh = dto.HinhAnh;
+            sp.SoLuongTon = dto.SoLuongTon ?? sp.SoLuongTon;
+
+            // =============================
+            // Xử lý Images (xóa và thêm mới)
+            // =============================
+            var oldImages = qly.HinhAnhSanPhams.Where(h => h.MaSanPham == sp.MaSanPham).ToList();
+            if (oldImages.Any())
+            {
+                qly.HinhAnhSanPhams.RemoveRange(oldImages);
+            }
+
+            if (dto.Images != null && dto.Images.Any())
+            {
+                foreach (var img in dto.Images)
+                {
+                    qly.HinhAnhSanPhams.Add(new HinhAnhSanPham
+                    {
+                        MaSanPham = sp.MaSanPham,
+                        HinhAnh = img
+                    });
+                }
+            }
+
+            // =============================
+            // Xử lý Features (xóa và thêm mới)
+            // =============================
+            var oldFeatures = qly.TinhNangSanPhams.Where(t => t.MaSanPham == sp.MaSanPham).ToList();
+            if (oldFeatures.Any())
+            {
+                qly.TinhNangSanPhams.RemoveRange(oldFeatures);
+            }
+
+            if (dto.Features != null && dto.Features.Any())
+            {
+                foreach (var ft in dto.Features)
+                {
+                    qly.TinhNangSanPhams.Add(new TinhNangSanPham
+                    {
+                        MaSanPham = sp.MaSanPham,
+                        MoTaTinhNang = ft
+                    });
+                }
+            }
+
+            try
+            {
+                qly.SaveChanges();
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, "Lỗi khi cập nhật sản phẩm: " + ex.Message);
+            }
+
+            return Ok(new { message = "Cập nhật sản phẩm thành công", dto.MaSanPham });
+        }
+
         // GET: api/DoYeuThich/{maNguoiDung}
         [HttpGet("DoYeuThich/{maNguoiDung}")]
         public async Task<IActionResult> GetDoYeuThichByNguoiDung(int maNguoiDung)
@@ -254,5 +420,45 @@ namespace DatSanPickleballBE.Controllers.shop
 
             return Ok("Đã xóa sản phẩm khỏi danh sách yêu thích.");
         }
+
+        [HttpDelete]
+        [Route("/SanPham/Delete/{maSanPham}")]
+        public IActionResult Delete(int maSanPham)
+        {
+            var sp = qly.SanPhams.FirstOrDefault(s => s.MaSanPham == maSanPham);
+            if (sp == null)
+            {
+                return NotFound("Không tìm thấy sản phẩm");
+            }
+
+            try
+            {
+                // Xóa images liên quan
+                var images = qly.HinhAnhSanPhams.Where(h => h.MaSanPham == maSanPham).ToList();
+                if (images.Any())
+                {
+                    qly.HinhAnhSanPhams.RemoveRange(images);
+                }
+
+                // Xóa features liên quan
+                var features = qly.TinhNangSanPhams.Where(t => t.MaSanPham == maSanPham).ToList();
+                if (features.Any())
+                {
+                    qly.TinhNangSanPhams.RemoveRange(features);
+                }
+
+                // Xóa sản phẩm
+                qly.SanPhams.Remove(sp);
+
+                qly.SaveChanges();
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, "Lỗi khi xóa sản phẩm: " + ex.Message);
+            }
+
+            return Ok(new { message = "Xóa sản phẩm thành công", maSanPham });
+        }
+
     }
 }

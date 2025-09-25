@@ -59,6 +59,49 @@ namespace DatSanPickleballBE.Controllers
                 TongTien = donHang.TongTien
             });
         }
+        [HttpGet("all")]
+        public async Task<ActionResult<IEnumerable<DonHangDto>>> GetAllDonHang()
+        {
+            var donHangs = await (from dh in qly.DonHangs
+                                  join tp in qly.ThanhPhos on dh.MaTP equals tp.MaTp
+                                  join qh in qly.QuanHuyens on dh.MaQH equals qh.MaQh
+                                  join nd in qly.Users on dh.MaNguoiDung equals nd.MaNguoiDung
+                                  orderby dh.NgayDat descending
+                                  select new DonHangDto
+                                  {
+                                      MaDonHang = dh.MaDonHang,
+                                      MaNguoiDung = dh.MaNguoiDung.Value,
+                                      TenNguoiDung = nd.TenNguoiDung,
+                                      NgayDat = dh.NgayDat.Value,
+                                      TongTien = dh.TongTien.Value,
+                                      TrangThai = dh.TrangThai,
+                                      MaTP = dh.MaTP.Value,
+                                      TenTP = tp.TenTp,
+                                      MaQH = dh.MaQH.Value,
+                                      TenQH = qh.TenQh,
+                                      DiaChi = dh.DiaChi,
+                                      DonHangDetails = (from ctdh in qly.ChiTietDonHangs
+                                                        join sp in qly.SanPhams on ctdh.MaSanPham equals sp.MaSanPham
+                                                        where ctdh.MaDonHang == dh.MaDonHang
+                                                        select new DonHangDetailDto
+                                                        {
+                                                            MaDonHang = ctdh.MaDonHang,
+                                                            MaSanPham = ctdh.MaSanPham,
+                                                            TenSanPham = sp.TenSanPham,
+                                                            HinhAnh = sp.HinhAnh,
+                                                            SoLuong = ctdh.SoLuong.Value,
+                                                            DonGia = ctdh.DonGia.Value
+                                                        }).ToList()
+                                  }).ToListAsync();
+
+            if (donHangs == null || donHangs.Count == 0)
+            {
+                return NotFound(new { message = "Chưa có đơn hàng nào trong hệ thống" });
+            }
+
+            return Ok(donHangs);
+        }
+
         [HttpGet("nguoidung/{maNguoiDung}")]
         public async Task<ActionResult<IEnumerable<DonHangDto>>> GetDonHangByNguoiDung(int maNguoiDung)
         {
@@ -110,11 +153,13 @@ namespace DatSanPickleballBE.Controllers
             var donHang = await (from dh in qly.DonHangs
                                  join tp in qly.ThanhPhos on dh.MaTP equals tp.MaTp
                                  join qh in qly.QuanHuyens on dh.MaQH equals qh.MaQh
+                                 join nd in qly.Users on dh.MaNguoiDung equals nd.MaNguoiDung
                                  where dh.MaDonHang == maDonHang
                                  select new DonHangDto
                                  {
                                      MaDonHang = dh.MaDonHang,
                                      MaNguoiDung = dh.MaNguoiDung.Value,
+                                     TenNguoiDung = nd.TenNguoiDung,
                                      NgayDat = dh.NgayDat.Value,
                                      TongTien = dh.TongTien.Value,
                                      TrangThai = dh.TrangThai,

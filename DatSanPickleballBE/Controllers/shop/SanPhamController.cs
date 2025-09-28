@@ -254,5 +254,53 @@ namespace DatSanPickleballBE.Controllers.shop
 
             return Ok("Đã xóa sản phẩm khỏi danh sách yêu thích.");
         }
+
+        [HttpGet]
+        [Route("/SanPham/List/MaGiamGia/{maGiamGia}")]
+        public IActionResult listSPcoMaGiamGia(int maGiamGia)
+        {
+            var giamGia = qly.GiamGia.Include(g => g.MaSanPhams).FirstOrDefault(g => g.MaGiamGia == maGiamGia);
+            if(giamGia == null)
+            {
+                return NotFound("Không tìm thấy mã giảm giá");
+            }
+            var result = giamGia.MaSanPhams.Select(sp => new
+            {
+                sp.MaSanPham,
+                sp.TenSanPham,
+                sp.GiaBan,
+                sp.HinhAnh,
+                sp.MoTa
+            }).ToList();
+            return Ok(result);
+        }
+
+        [HttpGet]
+        [Route("/SanPham/List/NoMaGiamGia/{maGiamGia}")]
+        public IActionResult listSPkhongCoMaGiamGia(int maGiamGia)
+        {
+            var giamGia = qly.GiamGia.Include(g => g.MaSanPhams).FirstOrDefault(g => g.MaGiamGia == maGiamGia);
+            if (giamGia == null)
+            {
+                return NotFound("Không tìm thấy mã giảm giá");
+            }
+            // Lấy danh sách ID sản phẩm đã áp dụng
+            var sanPhamDaApDungIds = giamGia.MaSanPhams.Select(sp => sp.MaSanPham).ToList();
+
+            // Lấy sản phẩm chưa áp dụng
+            var sanPhamsChuaApDung = qly.SanPhams
+                .Where(sp => !sanPhamDaApDungIds.Contains(sp.MaSanPham))
+                .Select(sp => new
+                {
+                    sp.MaSanPham,
+                    sp.TenSanPham,
+                    sp.GiaBan,
+                    sp.HinhAnh,
+                    sp.MoTa
+                })
+                .ToList();
+
+            return Ok(sanPhamsChuaApDung);
+        }
     }
 }

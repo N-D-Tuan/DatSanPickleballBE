@@ -130,6 +130,68 @@ WHERE MaBooking = @MaBooking";
             }
         }
 
+        [HttpGet("get-by-user/{maNguoiDung}")]
+        public async Task<ActionResult<IEnumerable<HistoryBookingDto>>> GetBookingsByUser(int maNguoiDung)
+        {
+            var bookings = await (from b in qly.Bookings
+                                  join ls in qly.LichSans on b.MaLichSan equals ls.MaLichSan
+                                  join s in qly.Sans on ls.MaSan equals s.MaSan
+                                  join kg in qly.KhungGios on ls.MaKhungGio equals kg.MaKhungGio
+                                  where b.MaNguoiDung == maNguoiDung
+                                  select new HistoryBookingDto
+                                  {
+                                      MaBooking = b.MaBooking,
+                                      MaNguoiDung = (int)b.MaNguoiDung,
+                                      TrangThai = b.TrangThai,
+                                      MaLichSan = ls.MaLichSan,
+                                      TenSan = s.TenSan,
+                                      Ngay = ls.Ngay,
+                                      GioBatDau = kg.GioBatDau,
+                                      GioKetThuc = kg.GioKetThuc
+                                  }).ToListAsync();
+
+            if (bookings == null || bookings.Count == 0)
+                return NotFound("Không tìm thấy lịch đặt nào cho người dùng này.");
+
+            return Ok(bookings);
+        }
+        [HttpPut("cancel/{maBooking}")]
+        public async Task<IActionResult> CancelBooking(int maBooking)
+        {
+            var sql = "UPDATE Booking SET TrangThai = N'Bị hủy' WHERE MaBooking = @p0";
+            await qly.Database.ExecuteSqlRawAsync(sql, maBooking);
+            return NoContent();
+        }
+
+
+        [HttpGet("by-user-and-date")]
+        public async Task<ActionResult<IEnumerable<HistoryBookingDto>>> GetBookingsByUserAndDate(int maNguoiDung, DateOnly ngay)
+        {
+            var bookings = await (
+                from b in qly.Bookings
+                join ls in qly.LichSans on b.MaLichSan equals ls.MaLichSan
+                join s in qly.Sans on ls.MaSan equals s.MaSan
+                join kg in qly.KhungGios on ls.MaKhungGio equals kg.MaKhungGio
+                where b.MaNguoiDung == maNguoiDung
+                      && ls.Ngay == ngay
+                select new HistoryBookingDto
+                {
+                    MaBooking = b.MaBooking,
+                    MaNguoiDung = (int)b.MaNguoiDung,
+                    TrangThai = b.TrangThai,
+                    MaLichSan = ls.MaLichSan,
+                    TenSan = s.TenSan,
+                    Ngay = ls.Ngay,
+                    GioBatDau = kg.GioBatDau,
+                    GioKetThuc = kg.GioKetThuc
+                }
+            ).ToListAsync();
+
+            if (bookings == null || bookings.Count == 0)
+                return NotFound("Không tìm thấy lịch đặt nào cho người dùng này vào ngày này.");
+
+            return Ok(bookings);
+        }
 
     }
 }

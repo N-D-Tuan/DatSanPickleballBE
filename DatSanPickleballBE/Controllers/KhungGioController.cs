@@ -6,7 +6,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace DatSanPickleballBE.Controllers
 {
-    [Route("api/[controller]")]
+    [Route("[controller]")]
     [ApiController]
     public class KhungGioController : ControllerBase
     {
@@ -18,6 +18,7 @@ namespace DatSanPickleballBE.Controllers
         }
 
         [HttpGet]
+        [Route("/KhungGio/List")]
         public async Task<ActionResult<IEnumerable<KhungGioDto>>> GetAllKhungGio()
         {
             var list = await qly.KhungGios
@@ -31,7 +32,8 @@ namespace DatSanPickleballBE.Controllers
             return Ok(list);
         }
 
-        [HttpGet("gio")]
+        [HttpGet]
+        [Route("/KhungGio/{gio}")]
         public async Task<ActionResult<IEnumerable<KhungGioDto>>> GetKhungGioTheoGio([FromQuery] TimeOnly gio)
         {
             var list = await qly.KhungGios

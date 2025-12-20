@@ -33,6 +33,24 @@ public partial class User
     [StringLength(50)]
     public string? Role { get; set; }
 
+    [Column("ResetOtp ")]
+    [StringLength(200)]
+    public string? ResetOtp { get; set; }
+
+    [Column("ResetOtpExpiry ", TypeName = "datetime")]
+    public DateTime? ResetOtpExpiry { get; set; }
+
     [InverseProperty("MaNguoiDungNavigation")]
     public virtual ICollection<Booking> Bookings { get; set; } = new List<Booking>();
+
+    [InverseProperty("MaNguoiDungNavigation")]
+    public virtual ICollection<DanhGiaSanPham> DanhGiaSanPhams { get; set; } = new List<DanhGiaSanPham>();
+
+    [InverseProperty("MaNguoiDungNavigation")]
+    public virtual ICollection<DonHang> DonHangs { get; set; } = new List<DonHang>();
+
+    [InverseProperty("MaNguoiDungNavigation")]
+    public virtual ICollection<GioHang> GioHangs { get; set; } = new List<GioHang>();
+    public virtual ICollection<DoYeuThich> DoYeuThiches { get; set; } = new List<DoYeuThich>();
+
 }

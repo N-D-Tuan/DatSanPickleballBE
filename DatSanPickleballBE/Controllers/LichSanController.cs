@@ -6,7 +6,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace DatSanPickleballBE.Controllers
 {
-    [Route("api/[controller]")]
+    [Route("[controller]")]
     [ApiController]
     public class LichSanController : ControllerBase
     {
@@ -18,6 +18,7 @@ namespace DatSanPickleballBE.Controllers
         }
 
         [HttpGet]
+        [Route("/LichSan/ListLichSan")]
         public async Task<ActionResult<IEnumerable<LichSanDto>>> GetAllLichSan()
         {
             var list = await qly.LichSans
@@ -34,7 +35,29 @@ namespace DatSanPickleballBE.Controllers
             return Ok(list);
         }
 
-        [HttpGet("search-by-id/{maLichSan}")]
+        [HttpGet]
+        [Route("/LichSan/ListNgay")]
+        public IActionResult GetNgay()
+        {
+            var today = DateOnly.FromDateTime(DateTime.Today);
+
+            var ngayList = qly.LichSans
+                .Where(ls => ls.Ngay >= today)
+                .Select(ls => ls.Ngay) // Lấy phần ngày, bỏ giờ
+                .Distinct()
+                .OrderBy(d => d)
+                .ToList();
+
+            if (ngayList == null || !ngayList.Any())
+            {
+                return NotFound(new { message = "Không có ngày nào phù hợp." });
+            }
+
+            return Ok(ngayList);
+        }
+
+        [HttpGet]
+        [Route("/MaLichSan/{maLichSan}")]
         public async Task<ActionResult<LichSanDto>> GetLichSanById(int maLichSan)
         {
             var ls = await qly.LichSans.FirstOrDefaultAsync(l => l.MaLichSan == maLichSan);
@@ -55,5 +78,79 @@ namespace DatSanPickleballBE.Controllers
 
             return Ok(lichSanDto);
         }
+        [HttpGet]
+        [Route("/LichSan/GetTimeSlots/{ngay}/{maSan}")]
+        public IActionResult GetLichTheoNgayVaSan(DateTime ngay, int maSan)
+        {
+            var ngayDateOnly = DateOnly.FromDateTime(ngay);
+
+            // Lấy tất cả khung giờ
+            var allSlots = qly.KhungGios
+                .Join(
+                qly.LichSans.Where(ls => ls.Ngay == ngayDateOnly && ls.MaSan == maSan),
+                k => k.MaKhungGio,
+                ls => ls.MaKhungGio,
+                (k, ls) => new TimeSlotDto
+                {
+                    MaLichSan = ls.MaLichSan,
+                    MaKhungGio = k.MaKhungGio,
+                    KhungGio = $"{k.GioBatDau:HH\\:mm} - {k.GioKetThuc:HH\\:mm}", // Format 24h
+                    TrangThai = "Trống"
+                })
+                .ToList();
+
+            // Lấy danh sách đã đặt cho ngày & sân được chọn
+            var bookedSlots = qly.LichSans
+                .Where(ls => ls.Ngay == ngayDateOnly && ls.MaSan == maSan)
+                .Select(ls => new { ls.MaKhungGio, ls.IsBooked })
+                .ToList();
+
+            // Merge trạng thái
+            foreach (var slot in allSlots)
+            {
+                var found = bookedSlots.FirstOrDefault(b => b.MaKhungGio == slot.MaKhungGio);
+                if (found != null && found.IsBooked == true)
+                {
+                    slot.TrangThai = "Đã đặt";
+                }
+            }
+
+            // Sắp xếp theo MaKhungGio tăng dần
+            var sortedSlots = allSlots.OrderBy(s => s.MaKhungGio).ToList();
+
+            return Ok(sortedSlots);
+        }
+
+        [HttpGet("get-ma-lich-san")]
+        public IActionResult GetMaLichSan(int maSan, DateTime ngay, int maKhungGio)
+        {
+            try
+            {
+                // Chuyển DateTime sang DateOnly nếu bảng LichSan dùng DateOnly
+                var ngayDateOnly = DateOnly.FromDateTime(ngay);
+
+                var lichSan = qly.LichSans
+                    .FirstOrDefault(ls =>
+                        ls.MaSan == maSan &&
+                        ls.Ngay == ngayDateOnly &&
+                        ls.MaKhungGio == maKhungGio
+                    );
+
+                if (lichSan == null)
+                {
+                    return NotFound("Không tìm thấy lịch sân.");
+                }
+
+                return Ok(new
+                {
+                    MaLichSan = lichSan.MaLichSan
+                });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, $"Lỗi: {ex.Message}");
+            }
+        }
+
     }
 }
